@@ -1,0 +1,16 @@
+{
+  "name": "@axa-ch/ui-kit-assets",
+  "version": "4.0.0",
+  "description": "AXA UI Kit Assets",
+  "homepage": "https://github.com/axa-ch/ui-kit-assets#readme",
+  "bugs": {
+    "url": "https://github.com/axa-ch/ui-kit-assets/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/axa-ch/ui-kit-assets.git"
+  },
+  "license": "MIT",
+  "author": "AXA (https://axa.ch)",
+  "type": "module"
+}

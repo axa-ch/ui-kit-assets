@@ -1,0 +1,64 @@
+name: Update assets
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-assets:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate assets
+        run: npm start
+        env:
+          FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
+          FILE_KEY: ${{ secrets.FILE_KEY }}
+
+      - name: Determine version bump
+        id: changes
+        run: |
+          statuses="$(git status --porcelain=v1 --untracked-files=all -- assets | cut -c1-2)"
+
+          if grep -q 'D' <<< "$statuses"; then
+            bump=major
+          elif grep -qE '^A|^\?\?' <<< "$statuses"; then
+            bump=minor
+          elif [[ -n "$statuses" ]]; then
+            bump=patch
+          else
+            bump=none
+          fi
+
+          echo "bump=$bump" >> "$GITHUB_OUTPUT"
+          echo "Version bump: $bump"
+
+      - name: Update package version
+        if: steps.changes.outputs.bump != 'none'
+        working-directory: assets
+        run: npm version "${{ steps.changes.outputs.bump }}" --no-git-tag-version
+
+      - name: Commit and push assets
+        if: steps.changes.outputs.bump != 'none'
+        run: |
+          version="$(node --input-type=module -e "import packageJson from './assets/package.json' with { type: 'json' }; console.log(packageJson.version)")"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all assets
+          git commit -m "chore(assets): release v${version}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
