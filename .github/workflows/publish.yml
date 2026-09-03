@@ -1,0 +1,35 @@
+name: Publish package
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: The tag whose contents should be published
+        required: true
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Check out tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com
+
+      - name: Publish to GitHub Packages
+        working-directory: assets
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

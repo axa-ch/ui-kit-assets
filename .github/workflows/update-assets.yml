@@ -6,9 +6,18 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: update-assets
+  cancel-in-progress: false
+
 jobs:
   update-assets:
     runs-on: ubuntu-latest
+
+    outputs:
+      bump: ${{ steps.changes.outputs.bump }}
+      tag: ${{ steps.version.outputs.tag }}
+      notes: ${{ steps.changes.outputs.notes }}
 
     steps:
       - name: Check out repository
@@ -29,36 +38,105 @@ jobs:
           FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
           FILE_KEY: ${{ secrets.FILE_KEY }}
 
-      - name: Determine version bump
+      - name: Determine version bump and changes
         id: changes
         run: |
-          statuses="$(git status --porcelain=v1 --untracked-files=all -- assets | cut -c1-2)"
+          added=""
+          updated=""
+          removed=""
 
-          if grep -q 'D' <<< "$statuses"; then
+          while IFS= read -r line; do
+            if [[ -z "$line" ]]; then
+              continue
+            fi
+
+            status="${line:0:2}"
+            path="${line:3}"
+
+            case "$status" in
+              *D*) removed+="- \`${path}\`"$'\n' ;;
+              '??' | *A*) added+="- \`${path}\`"$'\n' ;;
+              *) updated+="- \`${path}\`"$'\n' ;;
+            esac
+          done <<< "$(git status --porcelain=v1 --untracked-files=all -- assets)"
+
+          if [[ -n "$removed" ]]; then
             bump=major
-          elif grep -qE '^A|^\?\?' <<< "$statuses"; then
+          elif [[ -n "$added" ]]; then
             bump=minor
-          elif [[ -n "$statuses" ]]; then
+          elif [[ -n "$updated" ]]; then
             bump=patch
           else
             bump=none
           fi
 
-          echo "bump=$bump" >> "$GITHUB_OUTPUT"
+          notes=""
+          if [[ -n "$added" ]]; then
+            notes+=$'### Added\n\n'"${added}"$'\n'
+          fi
+          if [[ -n "$updated" ]]; then
+            notes+=$'### Updated\n\n'"${updated}"$'\n'
+          fi
+          if [[ -n "$removed" ]]; then
+            notes+=$'### Removed\n\n'"${removed}"$'\n'
+          fi
+
+          {
+            echo "bump=${bump}"
+            echo "notes<<NOTES_EOF"
+            echo "${notes}"
+            echo "NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
           echo "Version bump: $bump"
 
       - name: Update package version
+        id: version
         if: steps.changes.outputs.bump != 'none'
         working-directory: assets
-        run: npm version "${{ steps.changes.outputs.bump }}" --no-git-tag-version
-
-      - name: Commit and push assets
-        if: steps.changes.outputs.bump != 'none'
         run: |
-          version="$(node --input-type=module -e "import packageJson from './assets/package.json' with { type: 'json' }; console.log(packageJson.version)")"
+          tag="$(npm version "${{ steps.changes.outputs.bump }}" --no-git-tag-version)"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 
+      - name: Commit, tag and push assets
+        if: steps.changes.outputs.bump != 'none'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add --all assets
-          git commit -m "chore(assets): release v${version}"
+          git commit -m "chore(assets): release ${TAG}"
+          git tag --annotate "$TAG" --message "Release ${TAG}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "$TAG"
+
+  publish:
+    needs: update-assets
+    if: needs.update-assets.outputs.bump != 'none'
+
+    permissions:
+      contents: read
+      packages: write
+
+    uses: ./.github/workflows/publish.yml
+    with:
+      tag: ${{ needs.update-assets.outputs.tag }}
+
+  release:
+    needs: [update-assets, publish]
+    if: needs.update-assets.outputs.bump != 'none'
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.update-assets.outputs.tag }}
+          NOTES: ${{ needs.update-assets.outputs.notes }}
+        run: gh release create "$TAG" --title "$TAG" --latest --notes "$NOTES"
