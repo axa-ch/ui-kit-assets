@@ -41,33 +41,33 @@ const main = async () => {
         currentColor: false,
       }),
     ),
-    isometricIcons: (await getImages(components.isometricIcons)).map(
-      ({ imageUrl, ...image }) => ({
-        imageUrl,
-        imagePath:
-          `assets/${image.containing_frame?.pageName}/${image.containing_frame?.name}`
-            .replaceAll(',', '')
-            .replaceAll(' ', '-')
-            .toLowerCase(),
-        imageName:
-          `${image.containing_frame?.containingComponentSet?.name?.trim()}-${image.name?.replaceAll('Size=', '').replaceAll(', Color=', '-')}.svg`
-            .replaceAll(',', '')
-            .replaceAll(' ', '-')
-            .toLowerCase(),
-        svgo: true,
-        currentColor: false,
-      }),
-    ),
+    // isometricIcons: (await getImages(components.isometricIcons)).map(
+    //   ({ imageUrl, ...image }) => ({
+    //     imageUrl,
+    //     imagePath:
+    //       `assets/${image.containing_frame?.pageName}/${image.containing_frame?.name}`
+    //         .replaceAll(',', '')
+    //         .replaceAll(' ', '-')
+    //         .toLowerCase(),
+    //     imageName:
+    //       `${image.containing_frame?.containingComponentSet?.name?.trim()}-${image.name?.replaceAll('Size=', '').replaceAll(', Color=', '-')}.svg`
+    //         .replaceAll(',', '')
+    //         .replaceAll(' ', '-')
+    //         .toLowerCase(),
+    //     svgo: true,
+    //     currentColor: false,
+    //   }),
+    // ),
   };
 
   console.log('basicIcons', images.basicIcons.length);
   console.log('brand', images.brand.length);
-  console.log('isometricIcons', images.isometricIcons.length);
+  // console.log('isometricIcons', images.isometricIcons.length);
 
   const allImages = [
     ...images.basicIcons,
     ...images.brand,
-    ...images.isometricIcons,
+    // ...images.isometricIcons,
   ];
 
   for (let image of allImages) {

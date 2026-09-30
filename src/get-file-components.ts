@@ -12,7 +12,7 @@ export const getFileComponents = async () => {
   return {
     basicIcons: components.filter(componentFilter('Basic Icons')),
     brand: components.filter(componentFilter('Brand')),
-    isometricIcons: components.filter(componentFilter('Isometric Icons')),
+    // isometricIcons: components.filter(componentFilter('Isometric Icons')),
   };
 };
 
