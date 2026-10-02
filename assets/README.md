@@ -18,11 +18,10 @@ npm install @axa-ch/ui-kit-assets
 
 ## Contents
 
-| Path               | Contents                                    |
-| ------------------ | ------------------------------------------- |
-| `basic-icons/`     | Country/language, functional, illustrative  |
-| `brand/`           | Favicon, logo, switch                       |
-| `isometric-icons/` | Building, device, document, human, and more |
+| Path           | Contents                                   |
+| -------------- | ------------------------------------------ |
+| `basic-icons/` | Country/language, functional, illustrative |
+| `brand/`       | Favicon, logo, switch                      |
 
 ## Versioning
 
